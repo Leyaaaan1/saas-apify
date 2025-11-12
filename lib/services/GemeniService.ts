@@ -11,9 +11,6 @@ export class GeminiService {
     private minInterval: number = 2000; // 2 seconds between calls (30 requests per minute)
     private requestCount: number = 0;
     private resetTime: number = Date.now() + 60000; // Reset counter every minute
-    private rateLimitExceeded: boolean = false; // Track if rate limit is hit
-    private rateLimitRetries: number = 0;
-    private maxRateLimitRetries: number = 1; // Only retry once before switching to fallback
 
     constructor() {
         const key = process.env.gemini_api_key;
@@ -35,7 +32,6 @@ export class GeminiService {
         if (now >= this.resetTime) {
             this.requestCount = 0;
             this.resetTime = now + 60000;
-            this.rateLimitRetries = 0; // Reset retry count
             console.log('🔄 Rate limit counter reset');
         }
 
@@ -63,16 +59,9 @@ export class GeminiService {
 
     /**
      * Analyze text using Gemini AI
-     * This is the PRIMARY analysis method - uses actual AI model
-     * Automatically switches to keyword fallback if rate limit is exceeded
+     * This method will ALWAYS use AI - it waits for rate limits instead of using fallback
      */
-    async analyzeText(title: string, content: string): Promise<AnalysisResult | null> {
-        // If rate limit is already exceeded, use fallback immediately
-        if (this.rateLimitExceeded) {
-            console.log('⚡ Rate limit active - using keyword-based analysis');
-            return this.createFallbackAnalysis(title, content);
-        }
-
+    async analyzeText(title: string, content: string, retryCount: number = 0): Promise<AnalysisResult | null> {
         try {
             // Apply rate limiting before API call
             await this.waitForRateLimit();
@@ -96,7 +85,7 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
   "keywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"]
 }`;
 
-            console.log(`🤖 Calling Gemini AI (Request ${this.requestCount}/30)...`);
+            console.log(`🤖 AI MODEL: Calling Gemini AI (Request ${this.requestCount}/30)...`);
 
             const response = await axios.post(
                 `${this.baseUrl}/gemini-2.5-flash:generateContent?key=${this.apiKey}`,
@@ -141,9 +130,6 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
 
             console.log(`✅ AI MODEL: ${analysis.sentiment.toUpperCase()} | Keywords: ${analysis.keywords.slice(0, 3).join(', ')}`);
 
-            // Reset retry counter on success
-            this.rateLimitRetries = 0;
-
             return analysis;
 
         } catch (error) {
@@ -151,63 +137,48 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
                 const status = error.response?.status;
 
                 if (status === 429) {
-                    console.error('🚫 Rate Limit Exceeded!');
-                    this.rateLimitRetries++;
+                    // Rate limit hit - calculate wait time and retry
+                    const retryAfter = error.response?.headers['retry-after'];
+                    const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000; // Default to 60 seconds
 
-                    // If we've already retried, switch to fallback mode
-                    if (this.rateLimitRetries > this.maxRateLimitRetries) {
-                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                        console.log('🔄 SWITCHING TO KEYWORD-BASED MODE');
-                        console.log('   All remaining posts will use fallback analysis');
-                        console.log('   This ensures uninterrupted processing');
-                        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                        this.rateLimitExceeded = true;
-                        return this.createFallbackAnalysis(title, content);
-                    }
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                    console.log('🚫 Rate Limit Exceeded!');
+                    console.log(`⏰ Waiting ${Math.ceil(waitTime / 1000)} seconds before retry...`);
+                    console.log(`🔄 Retry attempt: ${retryCount + 1}`);
+                    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-                    // First retry: wait and try again
-                    console.log('💡 Retrying once with exponential backoff...');
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                    return this.analyzeText(title, content);
+                    // Wait for the specified time
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+
+                    // Reset counters after waiting
+                    this.requestCount = 0;
+                    this.resetTime = Date.now() + 60000;
+
+                    // Retry the request
+                    console.log('🔄 Retrying API call...');
+                    return this.analyzeText(title, content, retryCount + 1);
 
                 } else if (status === 400) {
                     console.error('❌ Bad Request - Invalid input format');
+                    throw new Error('Bad Request: Invalid input format');
                 } else if (status === 403) {
                     console.error('❌ API Key Invalid or Unauthorized');
+                    throw new Error('API Key Invalid or Unauthorized');
                 } else {
                     console.error('❌ Gemini API Error:', {
                         status: status,
                         message: error.response?.data?.error?.message || error.message
                     });
+                    throw error;
                 }
             } else if (error instanceof SyntaxError) {
                 console.error('❌ JSON Parse Error - Gemini response was not valid JSON');
+                throw new Error('JSON Parse Error');
             } else {
                 console.error('❌ Unexpected error:', error);
+                throw error;
             }
-
-            // Use fallback for any other errors
-            console.warn('⚠️  Using fallback analysis (keyword-based)');
-            return this.createFallbackAnalysis(title, content);
         }
-    }
-
-    /**
-     * Check if currently in fallback mode
-     */
-    public isInFallbackMode(): boolean {
-        return this.rateLimitExceeded;
-    }
-
-    /**
-     * Reset rate limit state (useful for testing or manual reset)
-     */
-    public resetRateLimitState(): void {
-        this.rateLimitExceeded = false;
-        this.rateLimitRetries = 0;
-        this.requestCount = 0;
-        this.resetTime = Date.now() + 60000;
-        console.log('🔄 Rate limit state reset - AI mode re-enabled');
     }
 
     /**
@@ -264,66 +235,6 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
         return isValid;
     }
 
-
-    private createFallbackAnalysis(title: string, content: string): AnalysisResult {
-        console.log('🔧 KEYWORD BASE: Using keyword-based analysis (AI unavailable)');
-
-        const text = `${title} ${content}`.toLowerCase();
-
-        // Sentiment detection
-        const positiveWords = ['great', 'amazing', 'excellent', 'love', 'best', 'awesome', 'good', 'happy', 'success', 'win', 'beautiful', 'perfect', 'wonderful'];
-        const negativeWords = ['bad', 'terrible', 'awful', 'hate', 'worst', 'sad', 'fail', 'problem', 'issue', 'error', 'broken', 'poor', 'disappointed'];
-
-        let sentiment: 'positive' | 'neutral' | 'negative' = 'neutral';
-        const positiveCount = positiveWords.filter(w => text.includes(w)).length;
-        const negativeCount = negativeWords.filter(w => text.includes(w)).length;
-
-        if (positiveCount > negativeCount && positiveCount > 0) {
-            sentiment = 'positive';
-        } else if (negativeCount > positiveCount && negativeCount > 0) {
-            sentiment = 'negative';
-        }
-
-        // Generate summary
-        const summary = title.length > 100
-            ? `${title.substring(0, 97)}...`
-            : title || 'No title provided';
-
-        // Extract keywords
-        const keywords = this.extractSimpleKeywords(title, content);
-
-        return {
-            sentiment,
-            summary,
-            keywords
-        };
-    }
-
-    /**
-     * Simple keyword extraction for fallback
-     */
-    private extractSimpleKeywords(title: string, content: string): string[] {
-        const text = `${title} ${content}`.toLowerCase();
-
-        const stopWords = [
-            'the', 'and', 'for', 'with', 'this', 'that', 'from', 'have',
-            'been', 'your', 'what', 'about', 'which', 'their', 'would',
-            'there', 'could', 'should', 'will', 'into', 'just', 'like'
-        ];
-
-        const words = text
-            .split(/\s+/)
-            .map(word => word.replace(/[^a-z0-9]/g, ''))
-            .filter(word => word.length > 4)
-            .filter(word => !/^(https?|www)/.test(word))
-            .filter(word => !stopWords.includes(word))
-            .filter(word => word.length > 0);
-
-        // Get unique words and return top 5
-        const uniqueWords = [...new Set(words)];
-        return uniqueWords.slice(0, 5);
-    }
-
     /**
      * Get current statistics
      */
@@ -331,13 +242,10 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
         return {
             requestCount: this.requestCount,
             maxRequests: 30,
-            rateLimitExceeded: this.rateLimitExceeded,
-            inFallbackMode: this.rateLimitExceeded,
             timeUntilReset: Math.max(0, this.resetTime - Date.now()),
-            currentMode: this.rateLimitExceeded ? 'keyword-fallback' : 'ai-model'
+            mode: 'ai-model'
         };
     }
 }
-
 
 export const geminiService = new GeminiService();

@@ -10,11 +10,22 @@ const ResultBox: React.FC = () => {
     const [filter, setFilter] = useState<'all' | 'positive' | 'neutral' | 'negative'>('all');
 
     useEffect(() => {
+        // Initial fetch
         fetchPosts();
+
+        // Set up polling every 3 seconds for real-time updates
+        const interval = setInterval(() => {
+            fetchPosts(true); // Silent fetch (no loading state)
+        }, 3000);
+
+        // Cleanup interval on unmount
+        return () => clearInterval(interval);
     }, []);
 
-    const fetchPosts = async () => {
-        setLoading(true);
+    const fetchPosts = async (silent: boolean = false) => {
+        if (!silent) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
@@ -27,7 +38,9 @@ const ResultBox: React.FC = () => {
                 setError('Failed to fetch posts');
             }
         } finally {
-            setLoading(false);
+            if (!silent) {
+                setLoading(false);
+            }
         }
     };
 
@@ -69,18 +82,36 @@ const ResultBox: React.FC = () => {
                         background: '#d1fae5',
                         padding: '0.5rem',
                         borderRadius: '0.5rem',
-                        marginRight: '0.75rem'
+                        marginRight: '0.75rem',
+                        position: 'relative'
                     }}>
                         <svg style={{ width: '1.5rem', height: '1.5rem', color: '#10b981' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
+                        {/* Live indicator */}
+                        <span style={{
+                            position: 'absolute',
+                            top: '0.25rem',
+                            right: '0.25rem',
+                            width: '0.5rem',
+                            height: '0.5rem',
+                            background: '#10b981',
+                            borderRadius: '50%',
+                            animation: 'pulse 2s ease-in-out infinite'
+                        }}></span>
                     </div>
                     <div>
                         <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: '#1f2937' }}>
                             Analysis Results
+                            <span style={{
+                                fontSize: '0.75rem',
+                                color: '#10b981',
+                                marginLeft: '0.5rem',
+                                fontWeight: 'normal'
+                            }}>● Live</span>
                         </h2>
                         <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                            View analyzed Reddit posts
+                            Auto-updating every 3 seconds
                         </p>
                     </div>
                 </div>
@@ -98,7 +129,8 @@ const ResultBox: React.FC = () => {
                                 border: 'none',
                                 cursor: 'pointer',
                                 background: filter === f ? '#2563eb' : '#f3f4f6',
-                                color: filter === f ? 'white' : '#374151'
+                                color: filter === f ? 'white' : '#374151',
+                                transition: 'all 0.2s'
                             }}
                         >
                             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -110,12 +142,22 @@ const ResultBox: React.FC = () => {
             {loading ? (
                 <div style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     padding: '3rem 0',
                     color: '#4b5563'
                 }}>
-                    Loading posts...
+                    <div style={{
+                        width: '3rem',
+                        height: '3rem',
+                        border: '3px solid #e5e7eb',
+                        borderTopColor: '#2563eb',
+                        borderRadius: '50%',
+                        animation: 'spin 1s linear infinite',
+                        marginBottom: '1rem'
+                    }}></div>
+                    <p>Loading posts...</p>
                 </div>
             ) : error ? (
                 <div style={{
@@ -126,7 +168,7 @@ const ResultBox: React.FC = () => {
                 }}>
                     <p style={{ color: '#991b1b', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{error}</p>
                     <button
-                        onClick={fetchPosts}
+                        onClick={() => fetchPosts()}
                         style={{
                             fontSize: '0.875rem',
                             color: '#dc2626',
@@ -161,7 +203,8 @@ const ResultBox: React.FC = () => {
                             border: '1px solid #e5e7eb',
                             borderRadius: '0.5rem',
                             padding: '1rem',
-                            transition: 'box-shadow 0.2s'
+                            transition: 'all 0.3s ease',
+                            animation: 'fadeIn 0.5s ease'
                         }}
                              onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'}
                              onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
@@ -278,7 +321,7 @@ const ResultBox: React.FC = () => {
             }}>
                 <span>Showing {filteredPosts.length} posts</span>
                 <button
-                    onClick={fetchPosts}
+                    onClick={() => fetchPosts()}
                     style={{
                         color: '#2563eb',
                         fontWeight: '500',
@@ -289,9 +332,40 @@ const ResultBox: React.FC = () => {
                     onMouseEnter={(e) => e.currentTarget.style.color = '#1e40af'}
                     onMouseLeave={(e) => e.currentTarget.style.color = '#2563eb'}
                 >
-                    Refresh
+                    ↻ Refresh
                 </button>
             </div>
+
+            <style>{`
+                @keyframes pulse {
+                    0%, 100% {
+                        opacity: 1;
+                    }
+                    50% {
+                        opacity: 0.5;
+                    }
+                }
+                
+                @keyframes spin {
+                    from {
+                        transform: rotate(0deg);
+                    }
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+                
+                @keyframes fadeIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
         </div>
     );
 };
