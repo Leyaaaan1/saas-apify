@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import {apifyService} from "../../../lib/services/RedditScrape";
 import {dbService} from "../../../lib/supabase/DbService";
-import {delay, RateLimiter} from "../../../lib/utils/ErrorHandler";
+import { RateLimiter, delay } from "../../../lib/utils/ErrorHandler";
 import {geminiService} from "../../../lib/services/GemeniService";
 
 
