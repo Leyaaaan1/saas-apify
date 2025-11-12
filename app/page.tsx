@@ -5,7 +5,6 @@ import {HealthResponse} from "../components/types";
 import React, {useEffect, useState} from "react";
 import Header from "../components/Header";
 import DataFetcher from "../components/DataFetcher";
-import Analyzer from "../components/Analyzer";
 import ResultBox from "../components/ResultBox";
 import Footer from "../components/Footer";
 
@@ -107,7 +106,6 @@ const App: React.FC = () => {
                             gap: '1.5rem'
                         }}>
                             <DataFetcher onSuccess={handleRefresh} />
-                            <Analyzer onSuccess={handleRefresh} />
                         </div>
                     </div>
 

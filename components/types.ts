@@ -17,7 +17,10 @@ export interface AnalysisResult {
     sentiment: 'positive' | 'neutral' | 'negative';
     summary: string;
     keywords: string[];
+    analysisSource?: 'ai-model' | 'keyword-fallback'; // Track analysis method
+    modelUsed?: string; // Track which model was used
 }
+
 
 export interface ScrapeResponse {
     success: boolean;

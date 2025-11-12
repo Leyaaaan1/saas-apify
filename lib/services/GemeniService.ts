@@ -139,7 +139,7 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
                 throw new Error('Invalid analysis structure');
             }
 
-            console.log(`✅ AI Analysis: ${analysis.sentiment.toUpperCase()} | Keywords: ${analysis.keywords.slice(0, 3).join(', ')}`);
+            console.log(`✅ AI MODEL: ${analysis.sentiment.toUpperCase()} | Keywords: ${analysis.keywords.slice(0, 3).join(', ')}`);
 
             // Reset retry counter on success
             this.rateLimitRetries = 0;
@@ -264,15 +264,9 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
         return isValid;
     }
 
-    /**
-     * PRODUCTION FALLBACK - Keyword-based analysis for resilience
-     * Activates automatically when AI API fails (rate limits, timeouts, errors)
-     * Ensures zero-downtime and graceful degradation
-     *
-     * This is a critical production feature for reliability, not a workaround
-     */
+
     private createFallbackAnalysis(title: string, content: string): AnalysisResult {
-        console.log('🔧 Using keyword-based analysis (AI unavailable)');
+        console.log('🔧 KEYWORD BASE: Using keyword-based analysis (AI unavailable)');
 
         const text = `${title} ${content}`.toLowerCase();
 
@@ -339,9 +333,11 @@ Respond with ONLY a valid JSON object in this exact format (no markdown, no expl
             maxRequests: 30,
             rateLimitExceeded: this.rateLimitExceeded,
             inFallbackMode: this.rateLimitExceeded,
-            timeUntilReset: Math.max(0, this.resetTime - Date.now())
+            timeUntilReset: Math.max(0, this.resetTime - Date.now()),
+            currentMode: this.rateLimitExceeded ? 'keyword-fallback' : 'ai-model'
         };
     }
 }
+
 
 export const geminiService = new GeminiService();

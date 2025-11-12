@@ -30,7 +30,7 @@ const Footer: React.FC = () => {
                             color: '#9ca3af',
                             marginTop: '0.25rem'
                         }}>
-                            Powered by Apify, Supabase, and Gemini AI
+                            Powered by Reddit, Supabase, and Gemini AI
                         </p>
                     </div>
 
@@ -48,7 +48,6 @@ const Footer: React.FC = () => {
                                 borderRadius: '50%',
                                 marginRight: '0.5rem'
                             }}></div>
-                            <span style={{ color: '#d1d5db' }}>System Active</span>
                         </div>
                         <span style={{ color: '#9ca3af' }}>v1.0.0</span>
                     </div>
