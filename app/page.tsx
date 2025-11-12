@@ -1,65 +1,124 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+import axios from 'axios';
+import {HealthResponse} from "../components/types";
+import React, {useEffect, useState} from "react";
+import Header from "../components/Header";
+import DataFetcher from "../components/DataFetcher";
+import Analyzer from "../components/Analyzer";
+import ResultBox from "../components/ResultBox";
+import Footer from "../components/Footer";
+
+const App: React.FC = () => {
+    const [healthStatus, setHealthStatus] = useState<HealthResponse['statistics'] | null>(null);
+    const [healthLoading, setHealthLoading] = useState(true);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    useEffect(() => {
+        fetchHealthStatus();
+    }, [refreshKey]);
+
+    const fetchHealthStatus = async () => {
+        setHealthLoading(true);
+        try {
+            const response = await axios.get<HealthResponse>('/api/health');
+            if (response.data.status === 'healthy') {
+                setHealthStatus(response.data.statistics);
+            }
+        } catch (error) {
+            console.error('Failed to fetch health status:', error);
+        } finally {
+            setHealthLoading(false);
+        }
+    };
+
+    const handleRefresh = () => {
+        setRefreshKey(prev => prev + 1);
+    };
+
+    return (
+        <div style={{
+            minHeight: '100vh',
+            background: '#f9fafb',
+            display: 'flex',
+            flexDirection: 'column'
+        }}>
+            <Header status={healthStatus} loading={healthLoading} />
+
+            <main style={{
+                flexGrow: 1,
+                maxWidth: '1280px',
+                margin: '0 auto',
+                padding: '2rem 1rem',
+                width: '100%'
+            }}>
+                <div style={{ maxWidth: '80rem', margin: '0 auto' }}>
+                    {/* Info Banner */}
+                    <div style={{
+                        background: '#eff6ff',
+                        border: '1px solid #bfdbfe',
+                        borderRadius: '0.5rem',
+                        padding: '1rem',
+                        marginBottom: '2rem'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+                            <svg style={{
+                                width: '1.25rem',
+                                height: '1.25rem',
+                                color: '#2563eb',
+                                marginTop: '0.125rem',
+                                marginRight: '0.75rem',
+                                flexShrink: 0
+                            }} fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                                <h3 style={{
+                                    fontSize: '0.875rem',
+                                    fontWeight: '600',
+                                    color: '#1e3a8a',
+                                    marginBottom: '0.25rem'
+                                }}>
+                                    How it works
+                                </h3>
+                                <p style={{
+                                    fontSize: '0.875rem',
+                                    color: '#1e40af',
+                                    lineHeight: '1.5'
+                                }}>
+                                    <strong>Step 1:</strong> Scrape posts from Reddit and store them in Supabase.
+                                    <strong style={{ marginLeft: '0.5rem' }}>Step 2:</strong> Posts are automatically analyzed with Gemini AI for sentiment, summaries, and keywords.
+                                    <strong style={{ marginLeft: '0.5rem' }}>Step 3:</strong> View results below!
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Grid */}
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr',
+                        gap: '1.5rem',
+                        marginBottom: '2rem'
+                    }}>
+                        <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                            gap: '1.5rem'
+                        }}>
+                            <DataFetcher onSuccess={handleRefresh} />
+                            <Analyzer onSuccess={handleRefresh} />
+                        </div>
+                    </div>
+
+                    {/* Results Section */}
+                    <ResultBox key={refreshKey} />
+                </div>
+            </main>
+
+            <Footer />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
-}
+    );
+};
+
+export default App;
