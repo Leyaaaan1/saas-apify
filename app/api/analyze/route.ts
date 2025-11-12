@@ -4,11 +4,10 @@ import {geminiService} from "../../../lib/services/GemeniService";
 import {dbService} from "../../../lib/supabase/DbService";
 
 
-const rateLimiter = new RateLimiter(1); // 1 call per second
+const rateLimiter = new RateLimiter(0.25);
 
 export async function POST() {
     try {
-        console.log('Starting analysis of unanalyzed posts...');
 
         // Get posts that don't have analysis yet
         const posts = await dbService.getPostsWithoutAnalysis();

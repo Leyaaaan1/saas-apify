@@ -24,7 +24,6 @@ export class RedditScrape {
 
                 try {
 
-                    // Fetch posts from Reddit's public JSON API
                     const response = await axios.get(
                         `${this.baseUrl}/r/${subreddit}/top.json`,
                         {
@@ -71,9 +70,8 @@ export class RedditScrape {
                     allPosts.push(...posts);
                     console.log(`✓ Scraped ${posts.length} posts from r/${subreddit}`);
 
-                    // Rate limiting: wait before next request (except for last subreddit)
                     if (i < subreddits.length - 1) {
-                        console.log(`⏳ Waiting ${this.requestDelay / 1000}s before next request...`);
+                        console.log(` Waiting ${this.requestDelay / 1000}s before next request...`);
                         await this.delay(this.requestDelay);
                     }
 

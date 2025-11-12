@@ -94,24 +94,6 @@ export class DbService {
     }
 
 
-    async getAnalyzedCount(): Promise<number> {
-        try {
-            const { count, error } = await supabase
-                .from('reddit_posts')
-                .select('*', { count: 'exact', head: true })
-                .not('analysis', 'is', null);
-
-            if (error) {
-                console.error('Error getting analyzed count:', error);
-                return 0;
-            }
-
-            return count || 0;
-        } catch (err) {
-            console.error('Get analyzed count exception:', err);
-            return 0;
-        }
-    }
 
 
     async getAllAnalyzedPosts(): Promise<RedditPost[]> {
@@ -135,48 +117,6 @@ export class DbService {
     }
 
 
-    /**
-     * Clear all posts from the database
-     */
-    async clearAllPosts(): Promise<{ success: boolean; error?: string }> {
-        try {
-            // Get all post IDs (UUIDs)
-            const { data: posts, error: fetchError } = await supabase
-                .from('reddit_posts')
-                .select('id');
-
-            if (fetchError) {
-                console.error('Error fetching posts:', fetchError);
-                return { success: false, error: fetchError.message };
-            }
-
-            if (!posts || posts.length === 0) {
-                console.log('✓ Database is already empty');
-                return { success: true };
-            }
-
-            // Get all UUIDs
-            const ids = posts.map(p => p.id);
-
-            // Delete all records using their UUIDs
-            const { error } = await supabase
-                .from('reddit_posts')
-                .delete()
-                .in('id', ids);
-
-            if (error) {
-                console.error('Error clearing posts:', error);
-                return { success: false, error: error.message };
-            }
-
-            console.log(`✓ Cleared ${posts.length} posts from database`);
-            return { success: true };
-        } catch (err) {
-            const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-            console.error('Clear posts exception:', errorMsg);
-            return { success: false, error: errorMsg };
-        }
-    }
 }
 
 export const dbService = new DbService();

@@ -6,8 +6,7 @@ export async function DELETE() {
     try {
         console.log('Clearing all posts from database...');
 
-        // Delete all posts from the reddit_posts table
-        // First, get all post IDs
+
         const { data: posts, error: fetchError } = await supabase
             .from('reddit_posts')
             .select('id');
