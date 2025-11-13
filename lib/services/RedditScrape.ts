@@ -4,7 +4,7 @@ import { RedditPost } from '../types';
 dotenv.config();
 
 export class RedditScrape {
-    private baseUrl = 'https://www.reddit.com';
+    private baseUrl = 'https://old.reddit.com';
     private userAgent = process.env.REDDIT_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
     private requestDelay = 2000;
 
