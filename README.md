@@ -3,8 +3,8 @@
 A SaaS application that scrapes Reddit data, analyzes it using AI, and presents insights through a clean web interface.
 
 ##  Live Demo
-- **Application**:
-- **GitHub Repository**:
+- **Application**: https://saas-apify.vercel.app/
+- **GitHub Repository**: https://github.com/Leyaaaan1/saas-apify
 
 ##  Tech Stack
 - **Frontend**: Next.js 14 (App Router) + TypeScript
