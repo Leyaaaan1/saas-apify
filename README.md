@@ -205,9 +205,16 @@ cd [project-name]
 npm install
 
 # 3. Environment variables (.env.local)
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_service_key
-gemini_api_key=your_gemini_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+
+# gemini
+gemini_api_key=your_gemini_api_key
+# Apify
+REDDIT_USER_AGENT=agent
+
 
 # 4. Run development server
 npm run dev
